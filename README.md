@@ -114,6 +114,7 @@ The script will ask you for:
 3. **Stats domain**: Will suggest `mycar-stats.yourdomain.com` (just press Enter to accept)
 4. **Username**: Choose any username for web access (your secure password will be generated)
 5. **Timezone**: Select your timezone from the list or press Enter for default
+6. **MCP Server** (optional): Install AI integration for Claude Desktop and other AI assistants
 
 ### Step 5: Configure Your Domain DNS
 
@@ -131,6 +132,8 @@ After the script completes, it will show your server's IP address. You need to:
 
 3. **Wait**: DNS changes can take 15 minutes to 48 hours to work everywhere
 
+**Note**: If you install the MCP server, it will be accessible at `http://yourcarname.yourdomain.com:8888/mcp` (no additional DNS record needed)
+
 ### Step 6: Start TeslaMate
 
 If you didn't start the services during setup:
@@ -146,6 +149,16 @@ docker compose ps
 ```
 
 All services should show as "running" or "healthy".
+
+**Important**: If you installed MCP with a domain, open port 8888 in your firewall:
+```bash
+# For Ubuntu/Debian with UFW
+sudo ufw allow 8888/tcp
+
+# For CentOS/RHEL with firewalld
+sudo firewall-cmd --permanent --add-port=8888/tcp
+sudo firewall-cmd --reload
+```
 
 ### Step 7: Get Tesla Authentication Tokens
 
@@ -196,6 +209,11 @@ You need to generate tokens to connect your Tesla:
 1. Check DNS records are correct
 2. Ensure ports 80 and 443 are open on your server
 
+### Can't Access MCP Server
+1. Ensure port 8888 is open on your server firewall
+2. Check if MCP service is running: `docker compose ps teslamate-mcp`
+3. Test with curl using the auth token from credentials.txt
+
 ### Forgot Credentials
 - Check the `credentials.txt` file: `cat teslamate-server/credentials.txt`
 
@@ -214,6 +232,15 @@ cd teslamate-server
 docker compose down
 ```
 
+To stop only specific services:
+```bash
+# Stop only TeslaMate (keep database running)
+docker compose stop teslamate
+
+# Stop only MCP server
+docker compose stop teslamate-mcp
+```
+
 ## 💾 Backup Your Data
 
 The database is stored in Docker volumes. To backup:
@@ -226,11 +253,67 @@ mkdir ~/teslamate-backups
 docker exec teslamate-server-database-1 pg_dump -U teslamate teslamate > ~/teslamate-backups/backup-$(date +%Y%m%d).sql
 ```
 
+## 🤖 AI Integration (MCP Server)
+
+If you chose to install the MCP server during setup, you can now use AI assistants to query your Tesla data!
+
+**Access URL**: The MCP server runs on port 8888 of your TeslaMate domain (e.g., `http://mycar.yourdomain.com:8888/mcp`)
+
+### What is MCP?
+
+The Model Context Protocol (MCP) server allows AI assistants like Claude to directly query your TeslaMate database. You can ask natural language questions like:
+- "What's my Tesla's current battery level?"
+- "Show me my monthly driving summary"
+- "How efficient was my driving last week?"
+- "Where do I charge most frequently?"
+
+### Setting up Claude Desktop
+
+**Prerequisites**: Install [Node.js](https://nodejs.org/) on your local computer (not the server)
+
+1. Open Claude Desktop configuration file:
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+2. Copy the configuration from your `credentials.txt` file (it includes your unique auth token)
+
+3. Restart Claude Desktop
+
+4. You can now ask Claude about your Tesla data!
+
+### MCP Features
+
+The MCP server provides 20+ tools for querying:
+- Vehicle information and status
+- Battery health and degradation
+- Driving patterns and efficiency
+- Charging history and locations
+- Custom SQL queries (read-only)
+
+### Testing MCP Server
+
+Check if the MCP server is running:
+```bash
+curl -H "Authorization: Bearer YOUR_AUTH_TOKEN" http://localhost:8888/mcp
+```
+(Replace YOUR_AUTH_TOKEN with the token from credentials.txt)
+
+### Remote Access
+
+The setup script automatically configures remote access:
+- **With domain**: MCP is accessible at `http://yourcarname.yourdomain.com:8888/mcp`
+- **Without domain**: MCP is only accessible locally at `http://localhost:8888/mcp`
+
+The script automatically handles port binding based on your configuration.
+
+Learn more: [TeslaMate MCP Documentation](https://github.com/cobanov/teslamate-mcp)
+
 ## 🆘 Getting Help
 
 1. Check TeslaMate documentation: https://docs.teslamate.org/
 2. TeslaMate GitHub issues: https://github.com/adriankumpf/teslamate/issues
 3. TeslaMate Discord community
+4. MCP Server issues: https://github.com/cobanov/teslamate-mcp/issues
 
 ## 📝 Notes
 

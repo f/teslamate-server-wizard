@@ -73,7 +73,7 @@ done
 echo -e "\n${YELLOW}Domain Configuration Requirements:${NC}"
 echo -e "You'll need to create DNS A records pointing to this server's IP address."
 echo -e "Your server's IP address is: ${BLUE}$(curl -s ifconfig.me 2>/dev/null || echo 'Unable to detect')${NC}"
-echo -e "\n${YELLOW}Add these DNS records:${NC}"
+echo -e "\n${YELLOW}DNS records needed:${NC}"
 echo -e "1. A record for TeslaMate domain → Your server IP"
 echo -e "2. A record for Grafana domain → Your server IP"
 echo -e "\n${YELLOW}Note: DNS changes can take up to 48 hours to propagate${NC}\n"
@@ -300,8 +300,119 @@ echo -e "Username: ${BLUE}admin${NC}"
 echo -e "Password: ${BLUE}admin${NC}"
 echo -e "${YELLOW}You'll be prompted to change the password on first login${NC}\n"
 
+# Ask about MCP server
+echo -e "\n${YELLOW}MCP Server for AI Integration${NC}"
+echo -e "MCP allows AI assistants (like Claude) to query your Tesla data"
+read -e -p "Do you want to install the MCP server for AI integration? (y/n): " INSTALL_MCP
+
+if [[ "$INSTALL_MCP" =~ ^[Yy]$ ]]; then
+    echo -e "\n${YELLOW}Setting up MCP server...${NC}"
+    
+    # Clone the MCP repository
+    if [ ! -d "teslamate-mcp" ]; then
+        git clone https://github.com/cobanov/teslamate-mcp.git
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ Successfully cloned MCP server${NC}"
+        else
+            echo -e "${RED}Error: Failed to clone MCP repository${NC}"
+            INSTALL_MCP="n"
+        fi
+    else
+        echo -e "${GREEN}✓ MCP server directory already exists${NC}"
+    fi
+    
+    if [[ "$INSTALL_MCP" =~ ^[Yy]$ ]]; then
+        # Generate auth token for MCP
+        MCP_AUTH_TOKEN=$(generate_password)
+        
+        # Create .env file for MCP
+        cat > teslamate-mcp/.env << EOF
+DATABASE_URL=postgresql://teslamate:$DATABASE_PASS@database:5432/teslamate
+AUTH_TOKEN=$MCP_AUTH_TOKEN
+EOF
+        
+        echo -e "${GREEN}✓ MCP server configured${NC}"
+        
+        # Determine MCP URL based on domain availability
+        if [[ -n "$DOMAIN" ]]; then
+            MCP_URL="http://${DOMAIN}:8888/mcp"
+        else
+            MCP_URL="http://localhost:8888/mcp"
+        fi
+        
+        # Add MCP configuration to credentials file
+        cat >> credentials.txt << EOF
+
+MCP Server (AI Integration):
+---------------------------
+MCP Server URL: $MCP_URL
+Auth Token: $MCP_AUTH_TOKEN
+Port: 8888 (ensure this port is open in your firewall if using remote access)
+
+To use with Claude Desktop, add to config:
+{
+  "mcpServers": {
+    "TeslaMate": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "$MCP_URL",
+        "--allow-http",
+        "--header",
+        "Authorization:Bearer $MCP_AUTH_TOKEN"
+      ]
+    }
+  }
+}
+
+Note: Claude Desktop requires Node.js/npm to be installed locally.
+EOF
+        
+        # Determine port binding based on domain availability
+        if [[ -n "$DOMAIN" ]]; then
+            # If domain is configured, expose externally
+            PORT_BINDING="8888:8888"
+            echo -e "${YELLOW}Note: MCP server will be exposed on port 8888 for remote access${NC}"
+        else
+            # Local access only
+            PORT_BINDING="127.0.0.1:8888:8888"
+        fi
+        
+        # Add MCP service to docker-compose.yml
+        cat >> docker-compose.yml << EOF
+
+  teslamate-mcp:
+    image: python:3.11-slim
+    restart: always
+    working_dir: /app
+    command: >
+      sh -c "apt-get update && apt-get install -y git &&
+             pip install --no-cache-dir uv &&
+             uv sync &&
+             uv run python main_remote.py"
+    volumes:
+      - ./teslamate-mcp:/app
+    ports:
+      - "$PORT_BINDING"
+    environment:
+      - DATABASE_URL=postgresql://teslamate:${DATABASE_PASS}@database:5432/teslamate
+      - AUTH_TOKEN=${MCP_AUTH_TOKEN}
+    networks:
+      - teslamate
+    depends_on:
+      - database
+EOF
+        
+        echo -e "${GREEN}✓ MCP service added to docker-compose.yml${NC}"
+    fi
+fi
+
 # Ask to start services
-echo -e "${YELLOW}Ready to start TeslaMate services.${NC}"
+echo -e "\n${YELLOW}Ready to start TeslaMate services.${NC}"
+if [[ "$INSTALL_MCP" =~ ^[Yy]$ ]]; then
+    echo -e "${YELLOW}This will also start the MCP server for AI integration.${NC}"
+fi
 read -e -p "Do you want to start the services now? (y/n): " START_NOW
 
 if [[ "$START_NOW" =~ ^[Yy]$ ]]; then
@@ -326,7 +437,7 @@ fi
 echo -e "\n${GREEN}Setup complete!${NC}"
 echo -e "\n${YELLOW}⚠️  Important Next Steps:${NC}"
 SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo 'Unable to detect')
-echo -e "1. Configure DNS A records for both domains to point to: ${BLUE}$SERVER_IP${NC}"
+echo -e "1. Configure DNS A records to point to: ${BLUE}$SERVER_IP${NC}"
 echo -e "   - $DOMAIN → $SERVER_IP"
 echo -e "   - $STATS_DOMAIN → $SERVER_IP"
 echo -e "2. Wait for DNS propagation (can take up to 48 hours)"
@@ -339,4 +450,28 @@ echo -e "• ${GREEN}iOS/macOS:${NC} Auth app for Tesla (easy to use)"
 echo -e "  https://apps.apple.com/us/app/auth-app-for-tesla/id1552058613"
 echo -e "• ${GREEN}Windows/Linux:${NC} Tesla Auth (advanced)"
 echo -e "  https://github.com/adriankumpf/tesla_auth"
-echo -e "\nUse the app to generate tokens, then add them to TeslaMate at: ${BLUE}https://$DOMAIN${NC}" 
+echo -e "\nUse the app to generate tokens, then add them to TeslaMate at: ${BLUE}https://$DOMAIN${NC}"
+
+if [[ "$INSTALL_MCP" =~ ^[Yy]$ ]]; then
+    echo -e "\n${YELLOW}🤖 AI Integration (MCP Server):${NC}"
+    
+    # Use the same MCP_URL logic
+    if [[ -n "$DOMAIN" ]]; then
+        MCP_URL="http://${DOMAIN}:8888/mcp"
+    else
+        MCP_URL="http://localhost:8888/mcp"
+    fi
+    
+    if [[ "$START_NOW" =~ ^[Yy]$ ]]; then
+        echo -e "Your MCP server is running at: ${BLUE}$MCP_URL${NC}"
+    else
+        echo -e "Your MCP server will be available at: ${BLUE}$MCP_URL${NC}"
+        echo -e "after starting the services"
+    fi
+    if [[ -n "$DOMAIN" ]]; then
+        echo -e "${YELLOW}Important: Ensure port 8888 is open in your firewall${NC}"
+    fi
+    echo -e "Check ${BLUE}credentials.txt${NC} for Claude Desktop configuration"
+    echo -e "${YELLOW}Note: Claude Desktop requires Node.js installed on your local computer${NC}"
+    echo -e "Learn more: https://github.com/cobanov/teslamate-mcp"
+fi 
