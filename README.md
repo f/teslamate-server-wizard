@@ -2,8 +2,6 @@
 
 A simple, automated setup script for hosting your own TeslaMate server to track your Tesla vehicle data privately.
 
-![](./example.png)
-
 ## 🎯 What You'll Get
 
 ### 📊 Real-Time Vehicle Tracking
@@ -51,96 +49,106 @@ A simple, automated setup script for hosting your own TeslaMate server to track 
 
 ## 🚨 Important: Tesla Provider Restrictions
 
-**Tesla blocks many popular cloud providers!**
+**Tesla blocks many popular cloud providers!** Before starting, you need to know:
 
 - ❌ **Blocked providers**: DigitalOcean, Amazon AWS, Google Cloud, Microsoft Azure, and most major cloud providers
 - ✅ **What works**: Your home computer, local/regional VPS providers, or smaller hosting companies
 
-**Don't worry!** Our installer automatically checks if your server is compatible with Tesla.
+### How to Check if Your Server is Blocked
+
+Before setting up, test if Tesla has blocked your server:
+
+```bash
+curl -I https://auth.tesla.com
+```
+
+- ✅ **Good response** (you can proceed):
+  ```
+  HTTP/2 302
+  ```
+
+- ❌ **Blocked response** (find another server):
+  ```
+  HTTP/2 403
+  ```
+
+If you see `403 Forbidden`, Tesla has blocked your server's IP range and TeslaMate won't work there.
 
 ## 📋 Prerequisites
 
 ### 1. A Compatible Server
-- Ubuntu 20.04+ server (or similar Debian-based Linux)
+- A server/VPS that isn't blocked by Tesla (test with the command above)
 - Minimum 2GB RAM, 10GB storage
-- A server that isn't blocked by Tesla (our installer will check this for you)
+- Ubuntu 20.04+ or similar Linux distribution
 - Your own computer with port forwarding is also an option
 
 ### 2. Your Own Domain
 - You need to own a domain (e.g., `yourdomain.com`)
-- Access to your domain's DNS settings
-- You'll create two subdomains during setup
+- You'll create two subdomains:
+  - One for TeslaMate (e.g., `mycar.yourdomain.com`)
+  - One for statistics (e.g., `mycar-stats.yourdomain.com`)
 
-### 3. That's It!
-- Our installer handles everything else automatically
-- No need to manually install Docker, Git, or other software
-- Just need SSH access to your server (we'll guide you through user setup if needed)
+### 3. Basic Requirements
+- An email address for SSL certificates
+- Basic ability to use terminal/command line
+- Access to your domain's DNS settings
 
 ## 🚀 Quick Start
 
-**Setup time: ~10 minutes**
-
 ### Step 1: Connect to Your Server
-
-Most VPS providers give you root access by default.
 
 **For Windows users:**
 1. Download [PuTTY](https://www.putty.org/)
 2. Enter your server's IP address
-3. Click "Open" and login (usually as `root`)
+3. Click "Open" and login with your credentials
 
 **For Mac/Linux users:**
 ```bash
-ssh root@your-server-ip
+ssh your-username@your-server-ip
 ```
 
-### Step 2: Create a User (If Logged in as Root)
+### Step 2: Install Required Software
 
-Most VPS providers give you root access. If you're logged in as root, create a regular user first:
-
-```bash
-# Create a new user (replace 'tesla' with your preferred username)
-adduser tesla
-
-# Add the user to sudo group
-usermod -aG sudo tesla
-
-# Switch to the new user
-su - tesla
-```
-
-**Note**: Remember the password you set - you'll need it for sudo commands!
-
-### Step 3: One-Line Installation
-
-Run this single command to install everything:
+Copy and paste these commands one by one:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/f/teslamate-server-wizard/master/install.sh | bash
-```
+# Update system
+sudo apt update && sudo apt upgrade -y
 
-This will:
-- ✅ Check if Tesla blocks your server
-- ✅ Install Docker and Git
-- ✅ Set up permissions
-- ✅ Download the TeslaMate setup wizard
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
 
-**Important**: After installation completes, you MUST logout and login again:
-```bash
+# Install Git
+sudo apt install git -y
+
+# Add your user to docker group (replace 'your-username' with your actual username)
+sudo usermod -aG docker your-username
+
+# Logout and login again for changes to take effect
 exit
 ```
 
-Then reconnect to your server as your regular user (not root):
+Login again to your server, then verify Docker is working:
 ```bash
-ssh tesla@your-server-ip
+docker --version
 ```
 
-### Step 4: Run the Setup Wizard
-
-After logging back in (as your regular user, not root), run:
+### Step 3: Download TeslaMate Setup
 
 ```bash
+# Clone this repository (replace with your fork if you've made one)
+git clone https://github.com/f/teslamate-server.git
 cd teslamate-server
+```
+
+### Step 4: Run the Setup Script
+
+```bash
+# Make the script executable
+chmod +x run.sh
+
+# Run the setup
 ./run.sh
 ```
 
@@ -233,19 +241,13 @@ You need to generate tokens to connect your Tesla:
 
 ## 🛠️ Troubleshooting
 
-### Installation Issues
-- **"Don't run as root" error**: Create a regular user first (see Step 2)
-- **Permission denied**: Make sure you're using a regular user with sudo privileges, not root
-- **Docker issues**: The installer adds you to the docker group - make sure you logged out and back in
-- **Re-run installer**: You can safely run the installer again if needed
-
 ### "Connection Refused" Error
 - DNS might not have propagated yet (wait up to 48 hours)
 - Check if services are running: `docker compose ps`
 - View logs: `docker compose logs -f`
 
 ### "403 Forbidden" from Tesla
-- Your server is blocked by Tesla (the installer checks this)
+- Your server is blocked by Tesla
 - You need to use a different server/provider
 
 ### Can't Access the Websites
