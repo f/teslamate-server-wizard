@@ -2,6 +2,51 @@
 
 A simple, automated setup script for hosting your own TeslaMate server to track your Tesla vehicle data privately.
 
+## 🎯 What You'll Get
+
+### 📊 Real-Time Vehicle Tracking
+- See your Tesla's location on a map (like Find My iPhone, but for your car)
+- Monitor battery level, range, and charging status from anywhere
+- Get alerts when charging completes
+- Track if doors are locked, windows are open, or climate is on
+
+### 📈 Detailed Analytics & Reports
+- **Driving Stats**: How far you drive daily/monthly/yearly
+- **Efficiency Tracking**: Miles per kWh (like MPG for electric cars)
+- **Cost Analysis**: How much you spend on charging
+- **Battery Health**: Monitor battery degradation over time
+- **Speed & Acceleration**: Track your driving habits
+
+### 🔋 Charging Intelligence
+- Complete charging history with costs
+- See which chargers you use most
+- Track charging speed and efficiency
+- Compare home vs. Supercharger costs
+- Monitor vampire drain (battery loss while parked)
+
+### 📍 Location Features
+- Automatic trip logging with start/end addresses
+- Frequently visited places
+- Parking location history
+- Geofencing (know when your car enters/leaves areas)
+
+### 🤖 AI Assistant Integration (Optional)
+- Ask questions in plain English: "How far did I drive last month?"
+- Get insights: "What's my average efficiency in cold weather?"
+- Query your data naturally through Claude or other AI assistants
+
+### 🔐 Privacy First
+- **Your data stays on YOUR server** - not in Tesla's cloud
+- No third-party access to your driving habits
+- Complete control over your information
+- Secure encrypted connections
+
+### 📱 Access From Anywhere
+- Beautiful web dashboard accessible from any device
+- No app installation needed - works in your browser
+- Mobile-friendly interface
+- Real-time updates
+
 ## 🚨 Important: Tesla Provider Restrictions
 
 **Tesla blocks many popular cloud providers!** Before starting, you need to know:
