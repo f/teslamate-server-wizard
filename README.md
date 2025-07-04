@@ -104,7 +104,11 @@ If you see `403 Forbidden`, Tesla has blocked your server's IP range and TeslaMa
 
 **For Mac/Linux users:**
 ```bash
-ssh your-username@your-server-ip
+ssh root@YOUR-SERVER-IP
+
+adduser teslamate
+usermod -aG sudo teslamate
+su - teslamate
 ```
 
 ### Step 2: Install Required Software
@@ -112,8 +116,7 @@ ssh your-username@your-server-ip
 Copy and paste these commands one by one:
 
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
+sudo apt-get update
 
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -122,11 +125,8 @@ sudo sh get-docker.sh
 # Install Git
 sudo apt install git -y
 
-# Add your user to docker group (replace 'your-username' with your actual username)
-sudo usermod -aG docker your-username
-
-# Logout and login again for changes to take effect
-exit
+# Add your user to docker group
+sudo usermod -aG docker teslamate
 ```
 
 Login again to your server, then verify Docker is working:
@@ -138,7 +138,7 @@ docker --version
 
 ```bash
 # Clone this repository (replace with your fork if you've made one)
-git clone https://github.com/f/teslamate-server.git
+git clone https://github.com/f/teslamate-server-wizard.git teslamate
 cd teslamate-server
 ```
 

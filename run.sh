@@ -379,8 +379,9 @@ EOF
             PORT_BINDING="127.0.0.1:8888:8888"
         fi
         
-        # Add MCP service to docker-compose.yml
-        cat >> docker-compose.yml << EOF
+        # Add MCP service to docker-compose.yml after mosquitto service
+        # Create a temporary file with the MCP service definition
+        cat > .mcp-service-temp.yml << EOF
 
   teslamate-mcp:
     image: python:3.11-slim
@@ -394,7 +395,7 @@ EOF
     volumes:
       - ./teslamate-mcp:/app
     ports:
-      - "$PORT_BINDING"
+      - "${PORT_BINDING}"
     environment:
       - DATABASE_URL=postgresql://teslamate:${DATABASE_PASS}@database:5432/teslamate
       - AUTH_TOKEN=${MCP_AUTH_TOKEN}
@@ -403,6 +404,17 @@ EOF
     depends_on:
       - database
 EOF
+        
+        # Insert the MCP service after the mosquitto service (before the networks section)
+        # First, split the file at the networks: line
+        sed '/^networks:/,$d' docker-compose.yml > .docker-compose-top.yml
+        sed -n '/^networks:/,$p' docker-compose.yml > .docker-compose-bottom.yml
+        
+        # Combine the parts with the MCP service in between
+        cat .docker-compose-top.yml .mcp-service-temp.yml .docker-compose-bottom.yml > docker-compose.yml
+        
+        # Clean up temporary files
+        rm -f .mcp-service-temp.yml .docker-compose-top.yml .docker-compose-bottom.yml
         
         echo -e "${GREEN}✓ MCP service added to docker-compose.yml${NC}"
     fi
