@@ -2,6 +2,8 @@
 
 A simple, automated setup script for hosting your own TeslaMate server to track your Tesla vehicle data privately.
 
+![](./example.png)
+
 ## 🎯 What You'll Get
 
 ### 📊 Real-Time Vehicle Tracking
